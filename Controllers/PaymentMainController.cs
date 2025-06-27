@@ -10,12 +10,14 @@ namespace DiningVsCodeNew.Controllers;
 public class PaymentMainController : ControllerBase
 {
     PaymentMainRepository RepPymtMain;
+    ServedRepository _repServed;
 
     SieveProcessor _sieveProcessor;
-    public PaymentMainController(PaymentMainRepository repPymtMain, SieveProcessor sieveProcessor)
+    public PaymentMainController(PaymentMainRepository repPymtMain, SieveProcessor sieveProcessor, ServedRepository repServed)
     {
         this.RepPymtMain = repPymtMain;
         this._sieveProcessor = sieveProcessor;
+        _repServed = repServed;
     }
     // GET: api/Cities
     [HttpGet]
@@ -52,6 +54,7 @@ public class PaymentMainController : ControllerBase
 
 
         var paidPymts = RepPymtMain.GetPaidsPymts(custCodeFilter);
+        var count = _repServed.GetServedMealsCount();
         return Ok(paidPymts);
 
     }

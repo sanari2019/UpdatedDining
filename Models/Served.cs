@@ -12,6 +12,9 @@ namespace DiningVsCodeNew
         public DateTime Dateserved { get; set; }
         public int ServedBy { get; set; }
         public bool isServed { get; set; }
+        public User user { get; set; }
+        public int totalAmount{ get; set; }
+        public string server{ get; set; }
     }
 
 }

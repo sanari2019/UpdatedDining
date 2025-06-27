@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using DiningVsCodeNew.Models;
+using RepoDb.Enumerations;
 
 
 namespace DiningVsCodeNew.Controllers;
@@ -11,14 +12,16 @@ public class OnlinePaymentController : ControllerBase
     private OnlinePaymentRepository reponlinePayment;
     private UserRepository repuser;
     private PaymentMainRepository _pymtmain;
+    private OrderedMealRepository _orderedMeal;
     int idvalue = 0;
     private EmailConfiguration _emailConfig;
-    public OnlinePaymentController(OnlinePaymentRepository reponlinePymt, EmailConfiguration emailConfig, UserRepository repUser, PaymentMainRepository pymtmain)
+    public OnlinePaymentController(OnlinePaymentRepository reponlinePymt, EmailConfiguration emailConfig, UserRepository repUser, PaymentMainRepository pymtmain, OrderedMealRepository orderedMeal)
     {
         this.reponlinePayment = reponlinePymt;
         this._emailConfig = emailConfig;
         this.repuser = repUser;
         this._pymtmain = pymtmain;
+        _orderedMeal = orderedMeal;
     }
     // GET: api/Cities
     [HttpGet]
@@ -76,28 +79,77 @@ public class OnlinePaymentController : ControllerBase
         public PaymentMain PaymentMainData { get; set; }
     }
     [HttpPost]
-    public async Task<ActionResult<OnlinePaymentDto>> PostOnlinePayment(int id, OnlinePayment onlinePymt)
+    public ActionResult<OnlinePaymentDto> PostOnlinePayment(OnlinePaymentRequest requestData)
     {
 
-        if (onlinePymt != null)
+        if (requestData != null)
         {
-            User us = new User();
-            us = repuser.GetUser(onlinePymt.Paidby);
+
+            // User us = new User();
+            var us = repuser.GetUser(requestData.payment.Paidby);
+            reponlinePayment.insertOnlinePayment(requestData.payment);
+            // PaymentMain py = requestData.pymt;
+            // py.Amount = onlinePymt.AmountPaid;
+            if (requestData.payment != null)
+            {
+
+                if (requestData.orderedMeals.Any())
+                {
+                    requestData.pymt.Paid = true;
+                    requestData.pymt.DateEntered = DateTime.Now;
+                    requestData.pymt.timepaid = DateTime.Now;
+                    requestData.pymt.DateServed = DateTime.Now;
+                    requestData.pymt.opaymentid = requestData.payment.Id;
+                    _pymtmain.insertPaymentMain(requestData.pymt);
+                    if (requestData.pymt.Id != 0)
+                    {
+                        foreach (var order in requestData.orderedMeals)
+                        {
+                            order.Submitted = true;
+                            order.paymentMainId = requestData.pymt.Id;
+                            _orderedMeal.updateOrderedMeal(order);
+
+                        }
+                    }
+                }
+                else if (requestData.pymnt.Any())
+                {
+                    foreach (var pyt in requestData.pymnt)
+                    {
+                        pyt.opaymentid = requestData.payment.Id;
+                        pyt.Paid = true;
+                        pyt.timepaid = DateTime.Now;
+                        pyt.DateServed = DateTime.Now;
+                        _pymtmain.updatePaymentMain(pyt);
+                    }
+
+                }
+                us.freeze = true;
+                this.repuser.updateUser(us);
+
+            }
+
+            Task.Run(() =>  SuccessPaymentEmailAsync(us, requestData));
+            return Ok(requestData);
+        }
+        return BadRequest("Invalid onlinepayment data.");
+
+    }
+
+        private async Task SuccessPaymentEmailAsync(User us, OnlinePaymentRequest requestData)
+        {
             EmailSender _emailSender = new EmailSender(this._emailConfig);
             Email em = new Email();
             string logourl = "";//"https://evercaregroup.com/wp-content/uploads/2020/12/EVERCARE_LOGO_03_LEKKI_PRI_FC_RGB.png";
             string applink = "https://cafeteria.evercare.ng";
             string salutation = "Dear " + us.firstName + ",";
-            string emailcontent = "We have successfully received your payment of: " + "NGN" + onlinePymt.AmountPaid.ToString("N") + " Thanks for visiting Evercare's cafeteria";
+            string emailcontent = "We have successfully received your payment of: " + "NGN" + requestData.payment.AmountPaid.ToString("N") + " Thanks for visiting Evercare's cafeteria";
             string narration1 = " ";
             string econtent = em.HtmlMail("Payment Confirmation", applink, salutation, emailcontent, narration1, logourl);
             var message = new Message(new string[] { us.userName }, "Cafeteria Application", econtent);
             await _emailSender.SendEmailAsync(message);
-            reponlinePayment.insertOnlinePayment(onlinePymt);
+           
         }
-        return Ok(onlinePymt);
-
-    }
     // DELETE: api/Cities/5
     [HttpPost("deleteonlinePayment")]
     public async Task<IActionResult> Delete([FromBody] OnlinePayment onlinePymt)
@@ -132,5 +184,22 @@ public class OnlinePaymentController : ControllerBase
         }
         return Ok(onlinePayment);
     }
+//edited
+        
+        // [HttpGet("validate")]
+        // public IActionResult DeleteSampleBiobank(Transactioning transactioning){
+        //     // var onlinePayment = reponlinePayment.GetOnlinePaymentByRefNo(transactioning.reference); 
+            
+        //     // if(onlinePayment != null){
+        //     //     var paymentNodes = _pymtmain.GetPaymentbyOpaymentId(onlinePayment.id);
+        //     //     if(paymentNodes == null){
+        //     //         paymentNodes = _
+        //     //         return NotFound("No payment with this ");
+        //     //     }
+
+        //     // }else{
+        //     //     return OK("Online Payment Not Found")
+        //     // }
+        // }
 
 }

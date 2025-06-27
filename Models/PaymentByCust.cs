@@ -15,6 +15,9 @@ namespace DiningVsCodeNew
 
         [Sieve(CanSort = true, CanFilter = true)]
         public string EnteredbyName { get; set; }
+
+        public int RemainingAmountUnserved { get; set; }
+
         public bool Freeze { get; set; }
     }
 

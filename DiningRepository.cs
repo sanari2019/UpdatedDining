@@ -68,6 +68,21 @@ namespace DiningVsCodeNew
             }
             return users;
         }
+        public User GetUserByUsername(string usernameP)
+        {
+            // User user = null; // Initialize user variable
+
+            // SQL query to select user by username
+            string query = "SELECT * FROM [Dining].[dbo].[user] WHERE userName = @Username";
+
+            using (var connection = new SqlConnection(sett.ConString))
+            {
+
+                return connection.ExecuteQuery<User>(query, new { userName = usernameP }
+                        ).FirstOrDefault();
+            }
+
+        }
 
         public User GetUser(int id)
         {
@@ -80,7 +95,7 @@ namespace DiningVsCodeNew
             }
             return user;
         }
-        public User GetUser(string username)
+        public User GetUserName(string username)
         {
 
             var user = new User();
@@ -166,6 +181,36 @@ namespace DiningVsCodeNew
             return servedcount;
         }
 
+         public int GetServedMealsDCount(string mealType)
+    {
+        int servedCount = 0;
+
+        using (var connection = new SqlConnection(sett.ConString))
+        {
+            connection.Open();
+
+            var query = "SELECT TotalServedMeals FROM ServedMealsDetailedCountView WHERE MealType = @MealType";
+            servedCount = connection.ExecuteQuery<int>(query, new { MealType = mealType }).FirstOrDefault();
+        }
+
+        return servedCount;
+    }
+
+    public int GetBreakfastCount()
+    {
+        return GetServedMealsDCount("Breakfast");
+    }
+
+    public int GetLunchCount()
+    {
+        return GetServedMealsDCount("Lunch");
+    }
+
+    public int GetDinnerCount()
+    {
+        return GetServedMealsDCount("Dinner");
+    }
+
         public List<HistoryRecord> GetHistoryRecords(int ServedBy)
         {
 
@@ -240,6 +285,17 @@ namespace DiningVsCodeNew
         //     }
         //   return user;
         // }
+         public Vw_PaymentVsServed GetPymtUnserved(int id)
+        {
+
+            var pymt = new Vw_PaymentVsServed();
+            using (var connection = new SqlConnection(sett.ConString))
+            {
+
+                pymt = connection.Query<Vw_PaymentVsServed>(id).FirstOrDefault();
+            }
+            return pymt;
+        }
 
 
         public List<ServedReportModel> GetServedReport(DateTime startDate, DateTime endDate)
@@ -317,11 +373,13 @@ namespace DiningVsCodeNew
             StatementBuilderMapper.Add<SqlConnection>(new SqlServerStatementBuilder(new SqlServerDbSetting()), true);
 
         }
-        public int insertOnlinePayment(OnlinePayment onlinepymt)
+        public void insertOnlinePayment(OnlinePayment onlinepymt)
         {
             //UserRepository usrrepository = new UserRepository(cstring.ConString);
-            int id = Convert.ToInt16(this.Insert(onlinepymt));
-            return id;
+            using (var connection = new SqlConnection(sett.ConString))
+            {
+                connection.Insert(onlinepymt);
+            }
         }
         public void updateOnlinePayment(OnlinePayment onlinepymt)
         {
@@ -737,7 +795,11 @@ namespace DiningVsCodeNew
 
         public void InsertTransfer(Transfer transfer)
         {
-            this.Insert(transfer);
+            using (var connection = new SqlConnection(sett.ConString))
+            {
+                connection.Insert(transfer);
+            }
+
         }
 
         public void UpdateTransfer(Transfer transfer)
@@ -986,16 +1048,28 @@ namespace DiningVsCodeNew
             DbHelperMapper.Add<SqlConnection>(new SqlServerDbHelper(), true);
             StatementBuilderMapper.Add<SqlConnection>(new SqlServerStatementBuilder(new SqlServerDbSetting()), true);
         }
-        public int insertPaymentMain(PaymentMain pymtMain)
+        // public int insertPaymentMain(PaymentMain pymtMain)
+        // {
+        //     //PaymentMainRepository pymtMainRepository = new PaymentMainRepository(constringPymtMain);
+        //     int pymtMainid = Convert.ToInt16(this.Insert(pymtMain));
+        //     return pymtMainid;
+        // }
+
+        public void insertPaymentMain(PaymentMain pymtMain)
         {
-            //PaymentMainRepository pymtMainRepository = new PaymentMainRepository(constringPymtMain);
-            int pymtMainid = Convert.ToInt16(this.Insert(pymtMain));
-            return pymtMainid;
+            using (var connection = new SqlConnection(sett.ConString))
+            {
+                connection.Insert(pymtMain);
+            }
+
         }
         public void updatePaymentMain(PaymentMain pymtMain)
         {
-            //PaymentMainRepository pymtMainRepository = new PaymentMainRepository(constringPymtMain);
-            this.Update(pymtMain);
+            using (var connection = new SqlConnection(sett.ConString))
+            {
+                connection.Update(pymtMain);
+            }
+
         }
         public void updatePaymentMainbyid(int opymtid, int id)
         {
@@ -1014,6 +1088,20 @@ namespace DiningVsCodeNew
                 var deletedrows = connection.Delete<PaymentMain>(pymtMain.Id);
                 return deletedrows;
             }
+        }
+
+          public List<PaymentMain> GetPaymentbyOpaymentId(int opaymentid)
+        {
+
+            var serveds = new List<PaymentMain>();
+            using (var connection = new SqlConnection(sett.ConString))
+            {
+                 var sql = "SELECT * FROM Paymentmain WHERE opaymentid = @opaymentid";
+                serveds = connection.ExecuteQuery<PaymentMain>(sql).ToList();
+                // serveds = connection.QueryAll<Served>(e => e.isServed == 0).ToList();
+              
+            }
+            return serveds;
         }
 
         public PaymentMain GetPymt(int id)

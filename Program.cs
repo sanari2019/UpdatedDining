@@ -9,9 +9,37 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 var emailConfig = builder.Configuration
-        .GetSection("EmailConfiguration")
-        .Get<EmailConfiguration>();
+    .GetSection("EmailConfiguration")
+    .Get<EmailConfiguration>();
 builder.Services.AddSingleton(emailConfig);
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: "EnableCORS",
+        builder =>
+        {
+            builder.WithOrigins("http://localhost",
+                "https://cafeteria.evercare.ng",
+                "https://cafeteriaapi.evercare.ng",
+                "https://cafeteriaapi.evercare.ng:2020",
+                "https://cafeteriaapi.evercare.ng:2020/Onlinepayment",
+                "https://cafeteria.evercare.ng:3030",
+                "https://localhost:4200",
+                "http://localhost:4200",
+                "http://localhost:5057",
+                "https://localhost:7230",
+                "http://cafeteria.evercare.ng",
+                "http://cafeteriaapi.evercare.ng",
+                "http://10.20.20.101:5050",
+                "http://10.20.20.101:4040",
+                "http://10.20.20.104:2020",
+                "http://localhost:90")
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .SetIsOriginAllowedToAllowWildcardSubdomains();
+        });
+});
+
 builder.Services.AddAuthentication(opt =>
 {
     opt.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -30,7 +58,7 @@ builder.Services.AddAuthentication(opt =>
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("superSecretKey@345"))
         };
     });
-builder.Services.AddControllers();
+
 builder.Services.AddScoped<IEmailSender, EmailSender>();
 builder.Services.AddScoped<ISieveProcessor, SieveProcessor>();
 
@@ -38,8 +66,8 @@ builder.Services.AddScoped<ISieveProcessor, SieveProcessor>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Configuration
- .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
- .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true);
+    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true);
 builder.Services.Configure<Setting>(builder.Configuration.GetSection("Setting"));
 var setting = builder.Configuration.GetSection("Setting").Get<Setting>();
 builder.Services.AddSingleton<Setting>(setting);
@@ -65,45 +93,22 @@ builder.Services.AddSingleton<MealActivityRepository>();
 builder.Services.AddSingleton<TransferRepository>();
 builder.Services.AddSingleton<FeedbackRepository>();
 
-var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
-builder.Services.AddSignalR();
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy(name: MyAllowSpecificOrigins,
-        builder => builder.WithOrigins("http://localhost",
-            "https://cafeteria.evercare.ng",
-            "https://cafeteria.evercare.ng:2020",
-            "https://cafeteria.evercare.ng:3030",
-            "http://localhost:4200",
-            "https://localhost:7230",
-            "http://10.20.20.104:2020",
-            "http://localhost:90")
-        .AllowAnyOrigin()
-        .AllowAnyMethod()
-        .AllowAnyHeader()
-        .SetIsOriginAllowedToAllowWildcardSubdomains());
-});
+builder.Services.AddControllers();
+
 var app = builder.Build();
-// var app = builder.Build();
-app.UseCors(option => option.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader().SetIsOriginAllowedToAllowWildcardSubdomains());
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-    app.UseDeveloperExceptionPage();
 }
 
-app.UseHttpsRedirection();
-app.UseCors("MyAllowSpecificOrigins");
+// app.UseHttpsRedirection();
+app.UseCors("EnableCORS");
 app.UseAuthentication();
 app.UseAuthorization();
 
-
-
 app.MapControllers();
-
-
 
 app.Run();
